@@ -1,7 +1,8 @@
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 source $SCRIPT_DIR/debian_init.env
 
-die() { yell "$*"; exit 111; }
+yell() { echo -e "$0: $*" >&2; }
+die() { yell "\n$*"; exit 111; }
 try() { "$@" || die "cannot $*"; }
 exec_as_root() { try echo ${ROOT_PASSWORD} | su root -c "$su_command"; }
 
@@ -9,10 +10,10 @@ exec_as_root() { try echo ${ROOT_PASSWORD} | su root -c "$su_command"; }
 #======= Add new user to sudoers =======
 #=======================================
 echo -e "Adding new user to sudoers..."
-# check if NEW_SUDOERS did not exists in sudoers file yet
-su_command="cat /etc/sudoers | grep ${NEW_SUDOERS}";
+# if NEW_SUDOERS did not exists in sudoers file yet
+su_command="cat /etc/sudoers | grep -c ${NEW_SUDOERS}";
 res=$(echo ${ROOT_PASSWORD} | su root -c "${su_command}");
-if [ -z "$res" -a "$res" != " " ]; then
+if [ $res -eq 0 ]; then
     # append NEW_SUDOERS to the sudoers file after the line containing root
     su_command="sed -ie \"/^root/a ${NEW_SUDOERS}\tALL=(ALL:ALL) ALL\" /etc/sudoers";
     exec_as_root
@@ -33,24 +34,48 @@ if [[ $res == *"cdrom://"* ]]; then
 fi
 echo -e "Done\n";
 
-#====================================================
-#======= Installing proprietary nvidia driver =======
-#====================================================
-echo -e "Installing proprietary nvidia driver"
-
-sudo echo "\n" | sudo apt-add-repository contrib non-free non-free-firmware
-# sudo apt install nvidia-open-kernel-dkms nvidia-driver firmware-misc-nonfree
-
 #===============================================
 #======= Installing desktop applications =======
 #===============================================
 echo -e "Upgrading packages...";
 # Install prerequisite
-sudo apt install curl;
+sudo apt-get install -y curl;
 
 # Instal brave
 curl -fsS https://dl.brave.com/install.sh | sh;
 
-# Install
+# Install vlc
+sudo apt-get install -y vlc;
+
+# Install ibus-bamboo for Vietnamese typing
+# src=https://software.opensuse.org//download.html?project=home%3Alamlng&package=ibus-bamboo
+echo 'deb http://download.opensuse.org/repositories/home:/lamlng/Debian_12/ /' | sudo tee /etc/apt/sources.list.d/home:lamlng.list
+curl -fsSL https://download.opensuse.org/repositories/home:lamlng/Debian_12/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home_lamlng.gpg > /dev/null
+sudo apt-get update
+sudo apt-get install -y ibus-bamboo
 
 echo -e "Done\n"
+
+#====================================================
+#======= Installing proprietary nvidia driver =======
+#====================================================
+echo -e "Installing proprietary nvidia driver"
+
+sudo echo "\n" | sudo apt-add-repository contrib non-free non-free-firmware;
+sudo apt update;
+sudo apt install nvidia-open-kernel-dkms nvidia-driver firmware-misc-nonfree;
+
+res=$(sudo cat /sys/module/nvidia_drm/parameters/modeset);
+if [[ "$res" != "N" && "$res" != "Y" ]]; then
+  # Prompt user to restart the device before continue
+  die "Please restart the device to apply nvidia-driver.\nDisable SecureBoot if you have it enabled.";
+elif [[ "$res" == "N" ]]; then
+  # if options modeset=1 did not exists in the file
+  res=$(sudo cat /etc/modprobe.d/nvidia-options.conf | sudo grep -c "options nvidia-drm modeset=1");
+  if [[ $res -eq 0 ]]; then
+    su_command="echo \"options nvidia-drm modeset=1\" >> /etc/modprobe.d/nvidia-options.conf";
+    exec_as_root
+  fi
+  # Prompt user to restart the device before continue
+  die "Please restart the device to apply modeset change.";
+fi
