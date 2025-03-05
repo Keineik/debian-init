@@ -37,10 +37,6 @@ sudo apt-get install curl -y;
 #=====> Install power managing packages
 sudo apt install power-profiles-daemon -y;
 
-#=====> Install flatpak and Plasma Discover flatpak plugin
-sudo apt-get install flatpak plasma-discover-backend-flatpak -y;
-flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo;
-
 #=======================================
 #======= Installing applications =======
 #=======================================
@@ -48,10 +44,17 @@ flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flat
 sudo apt-get install synaptic -y;
 
 #=====> Brave browser
-flatpak install flathub com.brave.Browser -y;
+curl -fsS https://dl.brave.com/install.sh | sh;
+# Add flags to support touchpad gestures in wayland
+# Source: https://github.com/flathub/com.brave.Browser/issues/576f
+sudo cp /usr/share/applications/brave-browser.desktop ~/.local/share/applications/;
+# Edit the new file manually https://www.reddit.com/r/linux/comments/1cklr5b/want_pinch_to_zoom_swipe_gestures_in_brave_chrome/
 
-#=====> Discord
-flatpak install flathub com.discordapp.Discord -y;
+#=====> Discord and Vencord
+wget "https://discord.com/api/download?platform=linux&format=deb" -O ~/discord.deb;
+sudo apt install ~/discord.deb -y;
+rm ~/discord.deb;
+sh -c "$(curl -sS https://raw.githubusercontent.com/Vendicated/VencordInstaller/main/install.sh)";
 
 #=====> Ibus Bamboo for Vietnamese typing
 # src=https://software.opensuse.org//download.html?project=home%3Alamlng&package=ibus-bamboo
