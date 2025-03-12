@@ -23,14 +23,17 @@ echo -e "Done\n";
 #==================================================
 #======= Removing applications and packages =======
 #==================================================
-sudo apt-get remove --purge -y "libreoffice*";
-sudo apt-get remove --purge -y akregator korganizer;
+sudo apt-get remove --purge -y akregator korganizer kwalletmanager;
 sudo apt-get clean -y;
 sudo apt-get autoremove -y;
 
 #==========================================
 #======= Installing useful packages =======
 #==========================================
+#=====> Add contrib and non-free repo to sources.list
+sudo apt-add-repository contrib -y;
+sudo apt-add-repository non-free -y;
+
 #=====> Install curl
 sudo apt-get install curl -y;
 
